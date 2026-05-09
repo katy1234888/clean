@@ -215,10 +215,10 @@ elif st.session_state.page == 2:
 
         st.success("🎯 Insight: These patterns help identify operational bottlenecks and customer experience issues.")
 # =========================================================
-# 📘 FINAL STORYBOARD (WITH ANSWERS + THEORY)
+# 📘 FINAL STORYBOARD (FULLY CORRECTED WITH REAL COLUMNS)
 # =========================================================
 
-st.markdown("# 📘 Business Case Storyboard (Final Answers)")
+st.markdown("# 📘 Business Case Storyboard (Final)")
 
 try:
     data = st.session_state.get("datasets", {})
@@ -233,9 +233,9 @@ try:
         hubs = data.get("Hub Performance", pd.DataFrame())
         courier = data.get("Courier Performance", pd.DataFrame())
 
-        # -------------------------
-        # COLUMN DETECTION
-        # -------------------------
+        # =====================================================
+        # HELPER FUNCTION
+        # =====================================================
         def find_col(df, keywords):
             for col in df.columns:
                 for k in keywords:
@@ -243,6 +243,7 @@ try:
                         return col
             return None
 
+        # Detect columns
         order_id = find_col(orders, ["order"])
         comp_order = find_col(complaints, ["order"])
         nps_score = find_col(nps, ["score"])
@@ -252,22 +253,28 @@ try:
         delivery_col = find_col(orders, ["delivery"])
         promised_col = find_col(orders, ["promise"])
 
-        hub_col = find_col(hubs, ["hub"])
-        sla_col = find_col(hubs, ["sla", "breach", "violation"])
-
         courier_col = find_col(courier, ["courier"])
         delay_col = find_col(courier, ["delay"])
         complaint_rate_col = find_col(courier, ["complaint"])
 
-        failed_col = find_col(hubs, ["fail"])
-        rto_col = find_col(hubs, ["rto"])
-
-        city_tier_col = find_col(orders, ["tier"])
         repeat_col = find_col(customers, ["repeat"])
+        city_tier_col = find_col(orders, ["tier"])
 
-        # -------------------------
+        # =====================================================
+        # FIXED HUB COLUMNS (YOUR REAL DATA)
+        # =====================================================
+        hub_city = "city"
+        on_time = "on_time_delivery"
+        failed = "failed_attempts"
+        rto = "rto_count"
+
+        # Create SLA breach
+        if on_time in hubs.columns:
+            hubs["sla_breach"] = 1 - hubs[on_time]
+
+        # =====================================================
         # DELAY CALCULATION
-        # -------------------------
+        # =====================================================
         if delivery_col and promised_col:
             orders[delivery_col] = pd.to_datetime(orders[delivery_col], errors="coerce")
             orders[promised_col] = pd.to_datetime(orders[promised_col], errors="coerce")
@@ -288,7 +295,7 @@ try:
             overall_nps = ((promoters - detractors) / total) * 100 if total else 0
             st.metric("Overall NPS", round(overall_nps, 2))
 
-            st.write("👉 NPS = %Promoters - %Detractors. Positive = good, Negative = poor CX.")
+            st.write("👉 NPS = %Promoters - %Detractors")
 
             if nps_date:
                 nps[nps_date] = pd.to_datetime(nps[nps_date], errors="coerce")
@@ -299,38 +306,34 @@ try:
                 )
                 st.line_chart(monthly)
 
-                st.write("👉 Trend shows whether customer experience is improving or declining.")
-
         if issue_col:
             st.write("Top Complaint Drivers")
             st.bar_chart(complaints[issue_col].value_counts())
 
-            st.write("👉 These issues are main reasons for detractors.")
-
-        st.write("👉 Relationship Insight: Delay ↑ → Complaints ↑ → NPS ↓")
+        st.write("👉 Insight: Delay ↑ → Complaints ↑ → NPS ↓")
 
         # =====================================================
         # SECTION B
         # =====================================================
         st.markdown("## 🚚 Section B: Operational Performance")
 
-        if hub_col and sla_col:
-            st.bar_chart(hubs.set_index(hub_col)[sla_col])
-            st.write("👉 High SLA breach hubs cause delays and poor customer experience.")
+        if "sla_breach" in hubs.columns:
+            st.bar_chart(hubs.set_index(hub_city)["sla_breach"])
+            st.write("👉 SLA breach = 1 - on_time_delivery")
         else:
-            st.warning("SLA data not found — column may be named differently (e.g., breach_rate)")
+            st.warning("SLA data not available")
 
         if courier_col and delay_col:
             st.bar_chart(courier.set_index(courier_col)[delay_col])
-            st.write("👉 High delay courier = operational inefficiency.")
+            st.write("👉 Courier delay impacts delivery performance")
 
         if courier_col and complaint_rate_col:
             st.bar_chart(courier.set_index(courier_col)[complaint_rate_col])
-            st.write("👉 High complaint courier = poor service quality.")
+            st.write("👉 Courier complaints indicate service issues")
 
-        if failed_col and rto_col:
-            st.write(hubs[[failed_col, rto_col]].corr())
-            st.write("👉 More failed attempts → higher RTO (returns).")
+        if failed in hubs.columns and rto in hubs.columns:
+            st.write(hubs[[failed, rto]].corr())
+            st.write("👉 Failed deliveries lead to higher RTO")
 
         # =====================================================
         # SECTION C
@@ -339,13 +342,12 @@ try:
 
         if city_tier_col and order_id and comp_order:
             tier2 = orders[orders[city_tier_col].astype(str).str.contains("2", na=False)]
-
             merged = tier2.merge(complaints, left_on=order_id, right_on=comp_order)
 
-            st.write("👉 Tier-2 cities show higher complaints due to:")
-            st.write("- Weak logistics network")
-            st.write("- Courier inefficiency")
-            st.write("- More failed deliveries")
+            st.write("Tier-2 cities show higher complaints due to:")
+            st.write("- Logistics inefficiency")
+            st.write("- Delivery failures")
+            st.write("- Courier performance issues")
 
         # =====================================================
         # SECTION D
@@ -370,8 +372,6 @@ try:
             repeat_rate = customers[repeat_col].mean() * 100
             st.metric("Repeat Rate", round(repeat_rate, 2))
 
-            st.write("👉 Poor experience reduces repeat customers.")
-
         # =====================================================
         # SECTION E
         # =====================================================
@@ -383,20 +383,20 @@ try:
         st.write("3. Tier-2 inefficiencies")
 
         st.write("### ⚡ Quick Wins")
-        st.write("- Fix worst courier partners")
-        st.write("- Reduce failed deliveries")
-        st.write("- Improve SLA tracking")
+        st.write("- Improve delivery success rate")
+        st.write("- Optimize courier allocation")
+        st.write("- Reduce failed attempts")
 
         st.write("### 🚀 Long-Term Fixes")
         st.write("- Strengthen Tier-2 infrastructure")
-        st.write("- AI-based route optimization")
+        st.write("- AI-based routing")
         st.write("- Real-time tracking")
 
         st.write("### 📊 KPIs")
         st.write("- NPS")
-        st.write("- Delay %")
-        st.write("- Complaint Rate")
         st.write("- SLA Breach %")
+        st.write("- Complaint Rate")
+        st.write("- RTO %")
         st.write("- Repeat Rate")
 
 except Exception as e:
