@@ -335,7 +335,8 @@ try:
             st.write(hubs[[failed, rto]].corr())
             st.write("👉 Failed deliveries lead to higher RTO")
 
-        
+except Exception as e:
+    st.warning(f"Storyboard Error: {e}")
 # =========================================================
 # 📘 DETAILED ANSWERS (WORD-BY-WORD DISPLAY)
 # =========================================================
