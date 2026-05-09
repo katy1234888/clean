@@ -339,7 +339,7 @@ try:
 
 except Exception as e:
     st.warning(f"Storyboard Error: {e}")
-if st.session_state.page == 2:
+if st.session_state.page == 4:
 
     # =========================================================
     # 📘 DETAILED ANSWERS (WORD-BY-WORD DISPLAY)
