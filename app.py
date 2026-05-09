@@ -8,132 +8,171 @@ from sklearn.impute import IterativeImputer
 
 st.set_page_config(page_title="Seashells Logistics Dashboard", layout="wide")
 
-st.title("📦 Seashells Logistics - Data Dashboard")
+# -------------------------------
+# STORY STATE MANAGEMENT
+# -------------------------------
+if "page" not in st.session_state:
+    st.session_state.page = 0
+
+
+def next_page():
+    st.session_state.page += 1
 
 # -------------------------------
-# FILE UPLOAD SECTION
+# PAGE 0: STORY INTRO
 # -------------------------------
-st.sidebar.header("Upload Datasets")
+if st.session_state.page == 0:
+    st.title("📦 Seashells Logistics - Case Story")
 
-orders_file = st.sidebar.file_uploader("Upload Orders Data", type=["csv"])
-customers_file = st.sidebar.file_uploader("Upload Customers Data", type=["csv"])
-nps_file = st.sidebar.file_uploader("Upload NPS Data", type=["csv"])
-complaints_file = st.sidebar.file_uploader("Upload Complaints Data", type=["csv"])
-hub_file = st.sidebar.file_uploader("Upload Hub Performance Data", type=["csv"])
-courier_file = st.sidebar.file_uploader("Upload Courier Performance Data", type=["csv"])
+    st.markdown("""
+    ## 📖 Background & Business Context
 
+    You are working as an Analyst at a mid-sized logistics company operating across Tier-1 and Tier-2 cities in India.
 
-# -------------------------------
-# HELPER FUNCTIONS
-# -------------------------------
-def load_data(file):
-    return pd.read_csv(file)
+    Over the past 3 months (October–December), the company has experienced a significant increase in order volumes due to festive demand.
 
-def dataset_summary(df, name):
-    st.subheader(f"📊 {name} Summary")
-    col1, col2 = st.columns(2)
+    However, leadership has raised serious concerns:
 
-    with col1:
-        st.write("Shape:", df.shape)
-        st.write("Columns:", df.columns.tolist())
+    - 📉 Declining customer satisfaction (NPS)
+    - ⚠️ Increase in customer complaints
+    - 🔁 Rising Return-to-Origin (RTO) rates
+    - 👥 Drop in repeat customer usage
+    - 🏭 Operational inefficiencies across hubs and courier partners
 
-    with col2:
-        st.write("Missing Values:")
-        st.write(df.isnull().sum())
+    🎯 **Goal:**
 
-    st.write("Statistical Summary:")
-    st.dataframe(df.describe(include='all'))
+    The leadership team wants to diagnose the root causes and take corrective actions before the next peak season.
 
-def clean_data(df):
-    df_clean = df.copy()
+    👉 As an analyst, your job is to uncover insights and tell a data-driven story.
+    """)
 
-    # Separate numeric and categorical
-    num_cols = df_clean.select_dtypes(include=np.number).columns
-    cat_cols = df_clean.select_dtypes(exclude=np.number).columns
-
-    # Numerical Imputation (ML-based)
-    if len(num_cols) > 0:
-        imputer_num = IterativeImputer(random_state=0)
-        df_clean[num_cols] = imputer_num.fit_transform(df_clean[num_cols])
-
-    # Categorical Imputation
-    if len(cat_cols) > 0:
-        imputer_cat = SimpleImputer(strategy='most_frequent')
-        df_clean[cat_cols] = imputer_cat.fit_transform(df_clean[cat_cols])
-
-    return df_clean
-
+    if st.button("➡️ Start Analysis"):
+        next_page()
 
 # -------------------------------
-# LOAD DATA
+# PAGE 1: DASHBOARD
 # -------------------------------
-datasets = {}
+elif st.session_state.page == 1:
 
-if orders_file:
-    datasets["Orders"] = load_data(orders_file)
+    st.title("📊 Data Upload & Exploration")
 
-if customers_file:
-    datasets["Customers"] = load_data(customers_file)
+    # -------------------------------
+    # FILE UPLOAD SECTION
+    # -------------------------------
+    st.sidebar.header("Upload Datasets")
 
-if nps_file:
-    datasets["NPS"] = load_data(nps_file)
+    orders_file = st.sidebar.file_uploader("Upload Orders Data", type=["csv"])
+    customers_file = st.sidebar.file_uploader("Upload Customers Data", type=["csv"])
+    nps_file = st.sidebar.file_uploader("Upload NPS Data", type=["csv"])
+    complaints_file = st.sidebar.file_uploader("Upload Complaints Data", type=["csv"])
+    hub_file = st.sidebar.file_uploader("Upload Hub Performance Data", type=["csv"])
+    courier_file = st.sidebar.file_uploader("Upload Courier Performance Data", type=["csv"])
 
-if complaints_file:
-    datasets["Complaints"] = load_data(complaints_file)
+    # -------------------------------
+    # HELPER FUNCTIONS
+    # -------------------------------
+    def load_data(file):
+        return pd.read_csv(file)
 
-if hub_file:
-    datasets["Hub Performance"] = load_data(hub_file)
+    def dataset_summary(df, name):
+        st.subheader(f"📊 {name} Summary")
+        col1, col2 = st.columns(2)
 
-if courier_file:
-    datasets["Courier Performance"] = load_data(courier_file)
+        with col1:
+            st.write("Shape:", df.shape)
+            st.write("Columns:", df.columns.tolist())
 
+        with col2:
+            st.write("Missing Values:")
+            st.write(df.isnull().sum())
 
-# -------------------------------
-# SHOW RAW DATA SUMMARIES
-# -------------------------------
-if datasets:
-    st.header("📌 Raw Data Overview")
+        st.write("Statistical Summary:")
+        st.dataframe(df.describe(include='all'))
 
-    for name, df in datasets.items():
-        with st.expander(f"{name} Dataset"):
-            dataset_summary(df, name)
+    def clean_data(df):
+        df_clean = df.copy()
 
-# -------------------------------
-# DATA CLEANING SECTION
-# -------------------------------
-st.header("🧹 Data Cleaning")
+        num_cols = df_clean.select_dtypes(include=np.number).columns
+        cat_cols = df_clean.select_dtypes(exclude=np.number).columns
 
-clean_toggle = st.toggle("Enable Data Cleaning (ML-based Imputation)")
+        if len(num_cols) > 0:
+            imputer_num = IterativeImputer(random_state=0)
+            df_clean[num_cols] = imputer_num.fit_transform(df_clean[num_cols])
 
-cleaned_datasets = {}
+        if len(cat_cols) > 0:
+            imputer_cat = SimpleImputer(strategy='most_frequent')
+            df_clean[cat_cols] = imputer_cat.fit_transform(df_clean[cat_cols])
 
-if clean_toggle:
-    st.success("Data Cleaning Activated ✅")
+        return df_clean
 
-    for name, df in datasets.items():
-        cleaned_datasets[name] = clean_data(df)
+    # -------------------------------
+    # LOAD DATA
+    # -------------------------------
+    datasets = {}
 
-    st.header("📊 Cleaned Data Overview")
+    if orders_file:
+        datasets["Orders"] = load_data(orders_file)
 
-    for name, df in cleaned_datasets.items():
-        with st.expander(f"{name} Cleaned Dataset"):
-            dataset_summary(df, name)
+    if customers_file:
+        datasets["Customers"] = load_data(customers_file)
 
-else:
-    st.info("Toggle the switch to clean data")
+    if nps_file:
+        datasets["NPS"] = load_data(nps_file)
 
+    if complaints_file:
+        datasets["Complaints"] = load_data(complaints_file)
 
-# -------------------------------
-# OPTIONAL: DOWNLOAD CLEAN DATA
-# -------------------------------
-if clean_toggle and cleaned_datasets:
-    st.header("⬇️ Download Cleaned Data")
+    if hub_file:
+        datasets["Hub Performance"] = load_data(hub_file)
 
-    for name, df in cleaned_datasets.items():
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label=f"Download {name} Cleaned Data",
-            data=csv,
-            file_name=f"{name}_cleaned.csv",
-            mime='text/csv'
-        )
+    if courier_file:
+        datasets["Courier Performance"] = load_data(courier_file)
+
+    # -------------------------------
+    # SHOW RAW DATA SUMMARIES
+    # -------------------------------
+    if datasets:
+        st.header("📌 Raw Data Overview")
+
+        for name, df in datasets.items():
+            with st.expander(f"{name} Dataset"):
+                dataset_summary(df, name)
+
+    # -------------------------------
+    # DATA CLEANING SECTION
+    # -------------------------------
+    st.header("🧹 Data Cleaning")
+
+    clean_toggle = st.toggle("Enable Data Cleaning (ML-based Imputation)")
+
+    cleaned_datasets = {}
+
+    if clean_toggle:
+        st.success("Data Cleaning Activated ✅")
+
+        for name, df in datasets.items():
+            cleaned_datasets[name] = clean_data(df)
+
+        st.header("📊 Cleaned Data Overview")
+
+        for name, df in cleaned_datasets.items():
+            with st.expander(f"{name} Cleaned Dataset"):
+                dataset_summary(df, name)
+
+    else:
+        st.info("Toggle the switch to clean data")
+
+    # -------------------------------
+    # DOWNLOAD CLEAN DATA
+    # -------------------------------
+    if clean_toggle and cleaned_datasets:
+        st.header("⬇️ Download Cleaned Data")
+
+        for name, df in cleaned_datasets.items():
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label=f"Download {name} Cleaned Data",
+                data=csv,
+                file_name=f"{name}_cleaned.csv",
+                mime='text/csv'
+            )
