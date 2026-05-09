@@ -215,158 +215,115 @@ elif st.session_state.page == 2:
 
         st.success("🎯 Insight: These patterns help identify operational bottlenecks and customer experience issues.")
 # =========================================================
-# 📊 ADVANCED ANALYSIS (BASED ON YOUR ACTUAL DATA)
+# 🧠 ADVANCED ANALYSIS (SAFE - NO BREAK)
 # =========================================================
 
 st.markdown("## 🧠 Advanced Business Analysis")
 
-orders = data["Orders"]
-customers = data["Customers"]
-nps = data["NPS"]
-complaints = data["Complaints"]
-hubs = data["Hub Performance"]
-courier = data["Courier Performance"]
-
-# ---------------------------------------------------------
-# 🔧 FEATURE ENGINEERING (CRITICAL FIX)
-# ---------------------------------------------------------
-orders["order_date"] = pd.to_datetime(orders["order_date"])
-orders["delivery_date"] = pd.to_datetime(orders["delivery_date"])
-orders["promised_date"] = pd.to_datetime(orders["promised_date"])
-
-# Delivery Delay (in days)
-orders["delivery_delay"] = (orders["delivery_date"] - orders["promised_date"]).dt.days
-orders["delivery_delay"] = orders["delivery_delay"].fillna(0)
-
-# RTO Flag
-orders["rto_flag"] = (orders["order_status"] == "RTO").astype(int)
-
-# ---------------------------------------------------------
-# SECTION A: NPS
-# ---------------------------------------------------------
-st.markdown("## 📊 Section A: NPS & Customer Experience")
-
-# 1. Overall NPS
-promoters = nps[nps["score"] >= 9].shape[0]
-detractors = nps[nps["score"] <= 6].shape[0]
-total = len(nps)
-
-overall_nps = ((promoters - detractors) / total) * 100
-st.metric("Overall NPS", round(overall_nps, 2))
-
-st.info("📖 Story: Overall NPS indicates customer loyalty. A drop suggests poor delivery experience during peak season.")
-
-# 2. Monthly Trend
-nps["response_date"] = pd.to_datetime(nps["response_date"])
-nps["month"] = nps["response_date"].dt.to_period("M")
-
-monthly_nps = nps.groupby("month").apply(
-    lambda x: ((x[x["score"] >= 9].shape[0] - x[x["score"] <= 6].shape[0]) / len(x)) * 100
-)
-
-st.line_chart(monthly_nps)
-
-st.info("📖 Story: Declining trend = worsening experience during festive demand surge.")
-
-# 3. Segment-wise NPS
-merged = nps.merge(customers, on="customer_id")
-
-segment_nps = merged.groupby("segment").apply(
-    lambda x: ((x[x["score"] >= 9].shape[0] - x[x["score"] <= 6].shape[0]) / len(x)) * 100
-)
-
-st.bar_chart(segment_nps)
-
-st.info("📖 Story: Identifies which customer segments are most dissatisfied.")
-
-# 4. Complaint Drivers
-driver_counts = complaints["issue_type"].value_counts()
-st.bar_chart(driver_counts)
-
-st.info("📖 Story: These are the biggest pain points affecting customer satisfaction.")
-
-# 5. Relationship: Delay → NPS
-merged_all = orders.merge(nps, on="order_id", how="inner")
-
-corr = merged_all[["delivery_delay", "score"]].corr()
-st.write("Correlation (Delay vs NPS):", corr)
-
-st.info("📖 Story: Longer delays reduce NPS → direct business impact.")
-
-# ---------------------------------------------------------
-# SECTION B: OPERATIONS
-# ---------------------------------------------------------
-st.markdown("## 🚚 Section B: Operational Performance")
-
-# 1. SLA Breach by City
-sla = orders.groupby("city")["delivery_delay"].mean().sort_values(ascending=False)
-st.bar_chart(sla)
-
-st.info("📖 Story: Cities with highest delays = operational bottlenecks.")
-
-# 2. Courier Performance
-st.bar_chart(courier.set_index("courier_partner")["sla_breach_rate"])
-st.bar_chart(courier.set_index("courier_partner")["complaint_rate"])
-
-st.info("📖 Story: Poor courier partners are driving delays and complaints.")
-
-# 3. Failed Attempts vs RTO
-hub_corr = hubs[["failed_attempts", "rto_count"]].corr()
-st.write("Failed Attempts vs RTO:", hub_corr)
-
-st.info("📖 Story: More failed attempts → higher RTO → revenue loss.")
-
-# ---------------------------------------------------------
-# SECTION C: DEEP DIVE
-# ---------------------------------------------------------
-st.markdown("## 🔍 Section C: Problem Deep Dive")
-
-# Merge complaints with orders
-deep = orders.merge(complaints, on="order_id", how="inner")
-
-city_complaints = deep["city"].value_counts()
-st.bar_chart(city_complaints)
-
-st.info("📖 Story: Some cities show disproportionately high complaints → investigate further.")
-
-# Courier issue in high complaint cities
-high_city = city_complaints.idxmax()
-subset = deep[deep["city"] == high_city]
-
-st.bar_chart(subset["courier_partner"].value_counts())
-
-st.info("📖 Story: Specific courier partners causing issues in certain cities.")
-
-# ---------------------------------------------------------
-# SECTION D: FUNNEL
-# ---------------------------------------------------------
-st.markdown("## 🔄 Section D: End-to-End Funnel")
-
 try:
-    # 1. Delayed → Complaints
+    orders = data["Orders"]
+    customers = data["Customers"]
+    nps = data["NPS"]
+    complaints = data["Complaints"]
+    hubs = data["Hub Performance"]
+    courier = data["Courier Performance"]
+
+    # -------------------------------
+    # 🔧 Feature Engineering
+    # -------------------------------
+    orders["order_date"] = pd.to_datetime(orders["order_date"], errors="coerce")
+    orders["delivery_date"] = pd.to_datetime(orders["delivery_date"], errors="coerce")
+    orders["promised_date"] = pd.to_datetime(orders["promised_date"], errors="coerce")
+
+    orders["delivery_delay"] = (orders["delivery_date"] - orders["promised_date"]).dt.days
+    orders["delivery_delay"] = orders["delivery_delay"].fillna(0)
+
+    orders["rto_flag"] = (orders["order_status"] == "RTO").astype(int)
+
+    # =====================================================
+    # 📊 SECTION A: NPS
+    # =====================================================
+    st.markdown("### 📊 Section A: NPS & Customer Experience")
+
+    promoters = nps[nps["score"] >= 9].shape[0]
+    detractors = nps[nps["score"] <= 6].shape[0]
+    total = len(nps)
+
+    overall_nps = ((promoters - detractors) / total) * 100
+    st.metric("Overall NPS", round(overall_nps, 2))
+
+    st.info("📖 Story: NPS reflects customer satisfaction. Lower scores indicate delivery or service issues.")
+
+    # Monthly trend
+    nps["response_date"] = pd.to_datetime(nps["response_date"], errors="coerce")
+    nps["month"] = nps["response_date"].dt.to_period("M")
+
+    monthly_nps = nps.groupby("month").apply(
+        lambda x: ((x[x["score"] >= 9].shape[0] - x[x["score"] <= 6].shape[0]) / len(x)) * 100
+    )
+
+    st.line_chart(monthly_nps)
+
+    # Segment NPS
+    merged = nps.merge(customers, on="customer_id")
+    segment_nps = merged.groupby("segment").apply(
+        lambda x: ((x[x["score"] >= 9].shape[0] - x[x["score"] <= 6].shape[0]) / len(x)) * 100
+    )
+
+    st.bar_chart(segment_nps)
+
+    # Complaint drivers
+    st.bar_chart(complaints["issue_type"].value_counts())
+
+    # =====================================================
+    # 🚚 SECTION B: OPERATIONS
+    # =====================================================
+    st.markdown("### 🚚 Section B: Operational Performance")
+
+    st.bar_chart(orders.groupby("city")["delivery_delay"].mean())
+
+    st.bar_chart(courier.set_index("courier_partner")["sla_breach_rate"])
+    st.bar_chart(courier.set_index("courier_partner")["complaint_rate"])
+
+    st.write("Failed Attempts vs RTO:",
+             hubs[["failed_attempts", "rto_count"]].corr())
+
+    # =====================================================
+    # 🔍 SECTION C: DEEP DIVE
+    # =====================================================
+    st.markdown("### 🔍 Section C: Problem Deep Dive")
+
+    deep = orders.merge(complaints, on="order_id", how="inner")
+
+    st.bar_chart(deep["city"].value_counts())
+
+    high_city = deep["city"].value_counts().idxmax()
+    st.bar_chart(deep[deep["city"] == high_city]["courier_partner"].value_counts())
+
+    st.info("📖 Story: Certain cities + courier partners are driving higher complaints.")
+
+    # =====================================================
+    # 🔄 SECTION D: FUNNEL
+    # =====================================================
+    st.markdown("### 🔄 Section D: End-to-End Funnel")
+
     delayed = orders[orders["delivery_delay"] > 0]
     delayed_comp = delayed.merge(complaints, on="order_id")
 
     pct_delay_complaint = (len(delayed_comp) / len(delayed)) * 100
     st.metric("% Delayed → Complaints", round(pct_delay_complaint, 2))
 
-    # 2. Complaints → Detractors
     comp_nps = complaints.merge(nps, on="order_id")
     detractors = comp_nps[comp_nps["score"] <= 6]
 
     pct_detractors = (len(detractors) / len(comp_nps)) * 100
     st.metric("% Complaints → Detractors", round(pct_detractors, 2))
 
-    # 3. Repeat Impact
-    repeat = customers.shape[0]
-    st.metric("Total Customers", repeat)
-
     st.info("""
     📖 Story:
-    - Delays → Complaints  
-    - Complaints → Detractors  
-    - Detractors → Reduced loyalty
+    Delays → Complaints → Detractors → Reduced repeat usage.
+    This directly impacts revenue and customer retention.
     """)
 
 except Exception as e:
-    st.warning(f"Section D Error: {e}")
+    st.warning(f"Advanced Analysis Error: {e}")
