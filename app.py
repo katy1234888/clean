@@ -344,31 +344,31 @@ st.info("📖 Story: Specific courier partners causing issues in certain cities.
 # ---------------------------------------------------------
 st.markdown("## 🔄 Section D: End-to-End Funnel")
 
-# 1. Delayed → Complaints
-delayed = orders[orders["delivery_delay"] > 0]
-delayed_comp = delayed.merge(complaints, on="order_id")
+try:
+    # 1. Delayed → Complaints
+    delayed = orders[orders["delivery_delay"] > 0]
+    delayed_comp = delayed.merge(complaints, on="order_id")
 
-pct_delay_complaint = (len(delayed_comp) / len(delayed)) * 100
-st.metric("% Delayed → Complaints", round(pct_delay_complaint, 2))
+    pct_delay_complaint = (len(delayed_comp) / len(delayed)) * 100
+    st.metric("% Delayed → Complaints", round(pct_delay_complaint, 2))
 
-# 2. Complaints → Detractors
-comp_nps = complaints.merge(nps, on="order_id")
-detractors = comp_nps[comp_nps["score"] <= 6]
+    # 2. Complaints → Detractors
+    comp_nps = complaints.merge(nps, on="order_id")
+    detractors = comp_nps[comp_nps["score"] <= 6]
 
-pct_detractors = (len(detractors) / len(comp_nps)) * 100
-st.metric("% Complaints → Detractors", round(pct_detractors, 2))
+    pct_detractors = (len(detractors) / len(comp_nps)) * 100
+    st.metric("% Complaints → Detractors", round(pct_detractors, 2))
 
-# 3. Repeat Impact
-repeat = customers.shape[0]  # placeholder since no repeat flag
-st.metric("Total Customers", repeat)
+    # 3. Repeat Impact
+    repeat = customers.shape[0]
+    st.metric("Total Customers", repeat)
 
-st.info("""
-📖 Story:
-- Delivery delays → complaints  
-- Complaints → detractors  
-- Detractors → reduced loyalty  
+    st.info("""
+    📖 Story:
+    - Delays → Complaints  
+    - Complaints → Detractors  
+    - Detractors → Reduced loyalty
+    """)
 
-⚠️ This creates a negative growth loop impacting revenue.
-""")
-        
-            st.warning(f"Section D Error: {e}")
+except Exception as e:
+    st.warning(f"Section D Error: {e}")0
