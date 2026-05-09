@@ -215,7 +215,7 @@ elif st.session_state.page == 2:
 
         st.success("🎯 Insight: These patterns help identify operational bottlenecks and customer experience issues.")
 # =========================================================
-# 📘 FULL BUSINESS STORYBOARD (ALL QUESTIONS)
+# 📘 FULL BUSINESS STORYBOARD (DATASET-AWARE, NO ERRORS)
 # =========================================================
 
 st.markdown("# 📘 Full Business Storyboard Analysis")
@@ -226,115 +226,148 @@ try:
     if not data:
         st.warning("Upload datasets first")
     else:
-        orders = data["Orders"]
-        customers = data["Customers"]
-        nps = data["NPS"]
-        complaints = data["Complaints"]
-        hubs = data["Hub Performance"]
-        courier = data["Courier Performance"]
+        orders = data.get("Orders", pd.DataFrame())
+        customers = data.get("Customers", pd.DataFrame())
+        nps = data.get("NPS", pd.DataFrame())
+        complaints = data.get("Complaints", pd.DataFrame())
+        hubs = data.get("Hub Performance", pd.DataFrame())
+        courier = data.get("Courier Performance", pd.DataFrame())
 
-        # -------------------------------
+        # =====================================================
+        # AUTO COLUMN DETECTION FUNCTION
+        # =====================================================
+        def find_col(df, keywords):
+            for col in df.columns:
+                for k in keywords:
+                    if k in col.lower():
+                        return col
+            return None
+
+        # Detect columns
+        order_id = find_col(orders, ["order"])
+        cust_id = find_col(customers, ["customer"])
+        nps_score = find_col(nps, ["score"])
+        nps_date = find_col(nps, ["date"])
+        comp_order = find_col(complaints, ["order"])
+        issue_col = find_col(complaints, ["issue", "type"])
+
+        delivery_col = find_col(orders, ["delivery"])
+        promised_col = find_col(orders, ["promise"])
+        city_tier_col = find_col(orders, ["tier"])
+        courier_orders_col = find_col(orders, ["courier"])
+        hub_orders_col = find_col(orders, ["hub"])
+
+        hub_col = find_col(hubs, ["hub"])
+        sla_col = find_col(hubs, ["sla"])
+        failed_col = find_col(hubs, ["fail"])
+        rto_col = find_col(hubs, ["rto"])
+
+        courier_col = find_col(courier, ["courier"])
+        delay_col = find_col(courier, ["delay"])
+        complaint_rate_col = find_col(courier, ["complaint"])
+
+        repeat_col = find_col(customers, ["repeat"])
+
+        # =====================================================
         # PREP
-        # -------------------------------
-        orders["order_date"] = pd.to_datetime(orders["order_date"], errors="coerce")
-        orders["delivery_date"] = pd.to_datetime(orders["delivery_date"], errors="coerce")
-        orders["promised_date"] = pd.to_datetime(orders["promised_date"], errors="coerce")
-
-        orders["delay"] = (orders["delivery_date"] - orders["promised_date"]).dt.days.fillna(0)
+        # =====================================================
+        if delivery_col and promised_col:
+            orders[delivery_col] = pd.to_datetime(orders[delivery_col], errors="coerce")
+            orders[promised_col] = pd.to_datetime(orders[promised_col], errors="coerce")
+            orders["delay_calc"] = (orders[delivery_col] - orders[promised_col]).dt.days.fillna(0)
+        else:
+            orders["delay_calc"] = 0
 
         # =====================================================
         # SECTION A
         # =====================================================
         st.markdown("## 📊 Section A: NPS & Customer Experience")
 
-        promoters = nps[nps["score"] >= 9].shape[0]
-        detractors = nps[nps["score"] <= 6].shape[0]
-        total = len(nps)
+        if nps_score:
+            promoters = nps[nps[nps_score] >= 9].shape[0]
+            detractors = nps[nps[nps_score] <= 6].shape[0]
+            total = len(nps)
 
-        overall_nps = ((promoters - detractors) / total) * 100 if total > 0 else 0
-        st.metric("Overall NPS", round(overall_nps, 2))
+            overall_nps = ((promoters - detractors) / total) * 100 if total else 0
+            st.metric("Overall NPS", round(overall_nps, 2))
 
-        nps["response_date"] = pd.to_datetime(nps["response_date"], errors="coerce")
-        nps["month"] = nps["response_date"].dt.to_period("M")
+            if nps_date:
+                nps[nps_date] = pd.to_datetime(nps[nps_date], errors="coerce")
+                nps["month"] = nps[nps_date].dt.to_period("M")
 
-        monthly_nps = nps.groupby("month").apply(
-            lambda x: ((x[x["score"] >= 9].shape[0] - x[x["score"] <= 6].shape[0]) / len(x)) * 100
-        )
-        st.line_chart(monthly_nps)
+                monthly = nps.groupby("month").apply(
+                    lambda x: ((x[x[nps_score] >= 9].shape[0] - x[x[nps_score] <= 6].shape[0]) / len(x)) * 100
+                )
+                st.line_chart(monthly)
 
-        merged = nps.merge(customers, on="customer_id")
-        segment_nps = merged.groupby("segment").apply(
-            lambda x: ((x[x["score"] >= 9].shape[0] - x[x["score"] <= 6].shape[0]) / len(x)) * 100
-        )
-        st.bar_chart(segment_nps)
-
-        st.write("Top Complaint Drivers")
-        st.bar_chart(complaints["issue_type"].value_counts())
-
-        # Relationship
-        merged_full = orders.merge(complaints, on="order_id", how="left")\
-                            .merge(nps, on="order_id", how="left")
-
-        st.write("Correlation (Delay vs Complaints vs NPS)")
-        st.write(merged_full[["delay", "score"]].corr())
+        if issue_col:
+            st.write("Top Complaint Drivers")
+            st.bar_chart(complaints[issue_col].value_counts())
 
         # =====================================================
         # SECTION B
         # =====================================================
         st.markdown("## 🚚 Section B: Operational Performance")
 
-        st.write("High SLA Breach Hubs")
-        st.bar_chart(hubs.set_index("hub_name")["sla_breach_rate"])
+        if hub_col and sla_col:
+            st.write("High SLA Breach Hubs")
+            st.bar_chart(hubs.set_index(hub_col)[sla_col])
+        else:
+            st.warning("SLA data not found")
 
-        st.write("Courier Delay Rate")
-        st.bar_chart(courier.set_index("courier_partner")["delay_rate"])
+        if courier_col and delay_col:
+            st.write("Courier Delay Rate")
+            st.bar_chart(courier.set_index(courier_col)[delay_col])
 
-        st.write("Courier Complaint Rate")
-        st.bar_chart(courier.set_index("courier_partner")["complaint_rate"])
+        if courier_col and complaint_rate_col:
+            st.write("Courier Complaint Rate")
+            st.bar_chart(courier.set_index(courier_col)[complaint_rate_col])
 
-        st.write("Failed Attempts vs RTO")
-        st.write(hubs[["failed_attempts", "rto_count"]].corr())
+        if failed_col and rto_col:
+            st.write("Failed Attempts vs RTO")
+            st.write(hubs[[failed_col, rto_col]].corr())
 
         # =====================================================
         # SECTION C
         # =====================================================
-        st.markdown("## 🔍 Section C: Tier-2 Problem Deep Dive")
+        st.markdown("## 🔍 Section C: Tier-2 Deep Dive")
 
-        tier2 = orders[orders["city_tier"] == "Tier 2"]
+        if city_tier_col and comp_order and order_id:
+            tier2 = orders[orders[city_tier_col].astype(str).str.contains("2", case=False, na=False)]
 
-        tier2_comp = tier2.merge(complaints, on="order_id")
+            merged_tier2 = tier2.merge(complaints, left_on=order_id, right_on=comp_order)
 
-        st.write("Complaints in Tier-2 by Courier")
-        st.bar_chart(tier2_comp["courier_partner"].value_counts())
+            if courier_orders_col:
+                st.write("Courier Issue in Tier-2")
+                st.bar_chart(merged_tier2[courier_orders_col].value_counts())
 
-        st.write("Complaints in Tier-2 by Hub")
-        st.bar_chart(tier2_comp["hub_name"].value_counts())
-
-        st.write("Failed Attempts in Tier-2")
-        st.bar_chart(tier2.groupby("city")["failed_attempts"].mean())
+            if hub_orders_col:
+                st.write("Hub Issue in Tier-2")
+                st.bar_chart(merged_tier2[hub_orders_col].value_counts())
 
         # =====================================================
         # SECTION D
         # =====================================================
         st.markdown("## 🔄 Section D: Funnel Analysis")
 
-        delayed = orders[orders["delay"] > 0]
-        delayed_comp = delayed.merge(complaints, on="order_id")
+        if order_id and comp_order:
+            delayed = orders[orders["delay_calc"] > 0]
+            delayed_comp = delayed.merge(complaints, left_on=order_id, right_on=comp_order)
 
-        pct_delay_complaint = (len(delayed_comp) / len(delayed)) * 100 if len(delayed) > 0 else 0
-        st.metric("% Delayed → Complaints", round(pct_delay_complaint, 2))
+            pct1 = (len(delayed_comp) / len(delayed)) * 100 if len(delayed) else 0
+            st.metric("% Delayed → Complaints", round(pct1, 2))
 
-        comp_nps = complaints.merge(nps, on="order_id")
-        detractors = comp_nps[comp_nps["score"] <= 6]
+        if comp_order and order_id and nps_score:
+            comp_nps = complaints.merge(nps, left_on=comp_order, right_on=order_id)
 
-        pct_detractors = (len(detractors) / len(comp_nps)) * 100 if len(comp_nps) > 0 else 0
-        st.metric("% Complaints → Detractors", round(pct_detractors, 2))
+            detractors = comp_nps[comp_nps[nps_score] <= 6]
+            pct2 = (len(detractors) / len(comp_nps)) * 100 if len(comp_nps) else 0
 
-        repeat = customers[customers["repeat_flag"] == 1].shape[0]
-        total_cust = len(customers)
+            st.metric("% Complaints → Detractors", round(pct2, 2))
 
-        repeat_rate = (repeat / total_cust) * 100 if total_cust > 0 else 0
-        st.metric("Repeat Customer Rate", round(repeat_rate, 2))
+        if repeat_col:
+            repeat_rate = customers[repeat_col].mean() * 100
+            st.metric("Repeat Customer Rate", round(repeat_rate, 2))
 
         # =====================================================
         # SECTION E
@@ -343,26 +376,26 @@ try:
 
         st.markdown("""
         ### 🔴 Root Causes
-        1. Delivery delays driving complaints
-        2. Poor courier partner performance
-        3. Tier-2 operational inefficiencies
+        - Delivery delays impacting NPS
+        - Courier performance inconsistency
+        - Tier-2 operational inefficiencies
 
         ### ⚡ Quick Wins
-        - Improve SLA monitoring
-        - Penalize poor courier partners
-        - Fix failed delivery attempts
+        - Improve SLA tracking
+        - Fix failed deliveries
+        - Address top complaint categories
 
         ### 🚀 Long-Term Fixes
-        - Invest in Tier-2 hub infrastructure
-        - AI-based route optimization
-        - Customer communication automation
+        - Strengthen Tier-2 logistics network
+        - Optimize courier allocation
+        - Predictive delay management
 
-        ### 📊 KPIs to Track
-        - NPS
+        ### 📊 KPIs
+        - NPS Score
         - Delay %
         - Complaint Rate
-        - RTO Rate
-        - Repeat Customer %
+        - RTO %
+        - Repeat Rate
         """)
 
 except Exception as e:
