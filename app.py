@@ -214,7 +214,7 @@ elif st.session_state.page == 2:
             pass
 
         st.success("🎯 Insight: These patterns help identify operational bottlenecks and customer experience issues.")
-if st.session_state.page == 1:
+elif st.session_state.page == 3:
 
     # =========================================================
     # 📘 FINAL STORYBOARD (FULLY CORRECTED WITH REAL COLUMNS)
