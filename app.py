@@ -157,8 +157,6 @@ elif st.session_state.page == 2:
 
     st.markdown("## 🎯 Answering Business Questions")
 
-    data = st.session_state.get("datasets", {})
-
     if not data:
         st.warning("Please upload datasets first")
     else:
