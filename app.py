@@ -345,7 +345,7 @@ if st.session_state.page == 2:
     # 📘 DETAILED ANSWERS (WORD-BY-WORD DISPLAY)
     # =========================================================
     if st.session_state.page == 2:
-    st.markdown("# 📘 Detailed Business Answers")
+        st.markdown("# 📘 Detailed Business Answers")
 
 # =====================================================
 # SECTION C
