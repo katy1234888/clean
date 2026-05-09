@@ -401,3 +401,194 @@ try:
 
 except Exception as e:
     st.warning(f"Storyboard Error: {e}")
+# =========================================================
+# 📘 DETAILED ANSWERS (WORD-BY-WORD DISPLAY)
+# =========================================================
+
+st.markdown("# 📘 Detailed Business Answers")
+
+# =====================================================
+# SECTION C
+# =====================================================
+st.markdown("## 🔍 Section C: Problem Deep Dive")
+
+st.markdown("""
+### Observation:
+Tier-2 cities have significantly higher complaint rates
+""")
+
+st.markdown("""
+### 1. Is it due to specific courier partners?
+
+Analysis Logic:
+- Filter Tier-2 orders
+- Join with complaints
+- Check complaint distribution by courier
+
+Insight:
+If certain courier partners dominate complaints in Tier-2:
+Yes — courier performance is a major driver
+
+Interpretation:
+Some courier partners may have:
+- Poor last-mile reach
+- Inexperienced delivery agents
+- Weak infrastructure in Tier-2 regions
+
+These partners perform fine in Tier-1 but struggle in Tier-2
+""")
+
+st.markdown("""
+### 2. Is it due to hub inefficiencies?
+
+Analysis Logic:
+- Look at hubs serving Tier-2 cities
+- Check on_time_delivery (low means bad)
+- Check sla_breach (high means bad)
+
+Insight:
+If certain hubs show low on-time delivery and high SLA breach:
+Yes — hub inefficiency is a key factor
+
+Interpretation:
+- Poor sorting or dispatch delays
+- Capacity constraints
+- Inefficient routing
+
+This leads to systemic delays before last-mile delivery
+""")
+
+st.markdown("""
+### 3. Is it due to delivery attempt failures?
+
+Analysis Logic:
+- Use failed_attempts
+- Use rto_count
+
+Insight:
+If Tier-2 shows high failed attempts and high RTO:
+Yes — delivery failures are a major contributor
+
+Interpretation:
+- Address issues
+- Customer unavailability
+- Poor communication
+
+Failed delivery → Customer frustration → Complaint
+""")
+
+st.markdown("""
+### Final Conclusion:
+
+Weak courier performance
++ Hub inefficiencies
++ High failed deliveries
+= Higher complaints in Tier-2 cities
+""")
+
+# =====================================================
+# SECTION D
+# =====================================================
+st.markdown("## 🔄 Section D: End-to-End Funnel Analysis")
+
+st.markdown("""
+Orders → Delivery → Complaints → NPS → Repeat Orders
+""")
+
+st.markdown("""
+### 1. What percentage of delayed orders result in complaints?
+
+Formula:
+(delayed orders with complaints / total delayed orders) * 100
+
+Insight:
+- High percentage means customers are highly sensitive to delays
+- Low percentage means delays are tolerated
+
+Business Meaning:
+Delivery delay is a primary trigger of complaints
+""")
+
+st.markdown("""
+### 2. What percentage of complaints turn into detractors?
+
+Formula:
+(detractors from complaints / total complaints) * 100
+
+Insight:
+- High percentage means complaint handling is poor
+- Low percentage means support recovers customer trust
+
+Business Meaning:
+This reflects post-issue experience quality
+""")
+
+st.markdown("""
+### 3. How does this impact repeat usage?
+
+Logic:
+Compare repeat rate of customers with complaints vs without complaints
+
+Insight:
+Lower repeat rate after complaints indicates customer churn
+
+Funnel:
+Delayed Delivery → Complaint Raised → Low NPS → Customer does NOT return
+
+This directly impacts revenue
+""")
+
+# =====================================================
+# SECTION E
+# =====================================================
+st.markdown("## 💡 Section E: Business Recommendations")
+
+st.markdown("""
+### 1. Top 3 Root Causes of Declining Customer Experience
+
+1. Delivery delays caused by hub inefficiency and courier delays
+2. Poor courier performance with high delay and complaint rates
+3. Delivery failures such as high failed attempts and RTO
+""")
+
+st.markdown("""
+### 2. Quick Wins (Short-Term Fixes)
+
+- Fix worst performing courier partners
+- Reduce failed deliveries through better address validation
+- Improve SLA tracking with real-time alerts
+""")
+
+st.markdown("""
+### 3. Long-Term Strategic Improvements
+
+- Strengthen Tier-2 logistics infrastructure
+- Use AI-based smart routing to predict delays
+- Improve last-mile delivery experience with better tracking
+""")
+
+st.markdown("""
+### 4. Suggested KPIs to Track
+
+Customer Metrics:
+- NPS
+- Detractor percentage
+
+Operational Metrics:
+- SLA breach percentage
+- On-time delivery percentage
+
+Efficiency Metrics:
+- Complaint rate
+- Failed attempt rate
+- RTO percentage
+
+Growth Metric:
+- Repeat purchase rate
+""")
+
+st.markdown("""
+### Final Executive Summary:
+
+The analysis shows that declining customer experience is driven by operational inefficiencies, especially in Tier-2 cities, where poor courier performance, hub delays, and high failed deliveries lead to increased complaints, lower NPS, and reduced repeat usage.
+""")
