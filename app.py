@@ -371,4 +371,4 @@ try:
     """)
 
 except Exception as e:
-    st.warning(f"Section D Error: {e}")0
+    st.warning(f"Section D Error: {e}")
