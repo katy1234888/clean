@@ -216,7 +216,6 @@ elif st.session_state.page == 2:
             pass
 
         st.success("🎯 Insight: These patterns help identify operational bottlenecks and customer experience issues.")
-
 # =========================================================
 # 📊 ADVANCED ANALYSIS (BASED ON YOUR ACTUAL DATA)
 # =========================================================
