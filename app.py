@@ -11,7 +11,7 @@ import plotly.express as px
 st.set_page_config(page_title="Seashells Logistics Dashboard", layout="wide")
 
 # -------------------------------
-# STATE MANAGEMENT
+# STORY STATE MANAGEMENT
 # -------------------------------
 if "page" not in st.session_state:
     st.session_state.page = 0
@@ -23,17 +23,24 @@ def next_page():
 # PAGE 0: STORY INTRO
 # -------------------------------
 if st.session_state.page == 0:
-
     st.title("📦 Seashells Logistics - Case Story")
 
     st.markdown("""
     ## 📖 Background & Business Context
 
-    Festive surge caused operational stress leading to:
-    - Declining NPS
-    - Increased complaints
-    - Higher RTO
-    - Drop in repeat users
+    You are working as an Analyst at a mid-sized logistics company operating across Tier-1 and Tier-2 cities in India.
+
+    Over the past 3 months (October–December), the company has experienced a significant increase in order volumes due to festive demand.
+
+    However, leadership has raised serious concerns:
+
+    - 📉 Declining customer satisfaction (NPS)
+    - ⚠️ Increase in customer complaints
+    - 🔁 Rising Return-to-Origin (RTO) rates
+    - 👥 Drop in repeat customer usage
+    - 🏭 Operational inefficiencies across hubs and courier partners
+
+    🎯 Goal: Diagnose root causes and improve performance before next peak season.
     """)
 
     if st.button("➡️ Start Analysis"):
@@ -48,198 +55,164 @@ elif st.session_state.page == 1:
 
     st.sidebar.header("Upload Datasets")
 
-    orders_file = st.sidebar.file_uploader("Orders", type=["csv"])
-    customers_file = st.sidebar.file_uploader("Customers", type=["csv"])
-    nps_file = st.sidebar.file_uploader("NPS", type=["csv"])
-    complaints_file = st.sidebar.file_uploader("Complaints", type=["csv"])
-    hub_file = st.sidebar.file_uploader("Hub", type=["csv"])
-    courier_file = st.sidebar.file_uploader("Courier", type=["csv"])
+    orders_file = st.sidebar.file_uploader("Upload Orders Data", type=["csv"])
+    customers_file = st.sidebar.file_uploader("Upload Customers Data", type=["csv"])
+    nps_file = st.sidebar.file_uploader("Upload NPS Data", type=["csv"])
+    complaints_file = st.sidebar.file_uploader("Upload Complaints Data", type=["csv"])
+    hub_file = st.sidebar.file_uploader("Upload Hub Performance Data", type=["csv"])
+    courier_file = st.sidebar.file_uploader("Upload Courier Performance Data", type=["csv"])
 
     def load_data(file):
         return pd.read_csv(file)
 
+    def dataset_summary(df, name):
+        st.subheader(f"📊 {name} Summary")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.write("Shape:", df.shape)
+            st.write("Columns:", df.columns.tolist())
+
+        with col2:
+            st.write("Missing Values:")
+            st.write(df.isnull().sum())
+
+        st.write("Statistical Summary:")
+        st.dataframe(df.describe(include='all'))
+
     def clean_data(df):
-        df = df.copy()
-        num = df.select_dtypes(include=np.number).columns
-        cat = df.select_dtypes(exclude=np.number).columns
+        df_clean = df.copy()
 
-        if len(num):
-            df[num] = IterativeImputer().fit_transform(df[num])
-        if len(cat):
-            df[cat] = SimpleImputer(strategy="most_frequent").fit_transform(df[cat])
+        num_cols = df_clean.select_dtypes(include=np.number).columns
+        cat_cols = df_clean.select_dtypes(exclude=np.number).columns
 
-        return df
+        if len(num_cols) > 0:
+            imputer_num = IterativeImputer(random_state=0)
+            df_clean[num_cols] = imputer_num.fit_transform(df_clean[num_cols])
+
+        if len(cat_cols) > 0:
+            imputer_cat = SimpleImputer(strategy='most_frequent')
+            df_clean[cat_cols] = imputer_cat.fit_transform(df_clean[cat_cols])
+
+        return df_clean
 
     datasets = {}
 
-    if orders_file: datasets["Orders"] = load_data(orders_file)
-    if customers_file: datasets["Customers"] = load_data(customers_file)
-    if nps_file: datasets["NPS"] = load_data(nps_file)
-    if complaints_file: datasets["Complaints"] = load_data(complaints_file)
-    if hub_file: datasets["Hub"] = load_data(hub_file)
-    if courier_file: datasets["Courier"] = load_data(courier_file)
+    if orders_file:
+        datasets["Orders"] = load_data(orders_file)
+    if customers_file:
+        datasets["Customers"] = load_data(customers_file)
+    if nps_file:
+        datasets["NPS"] = load_data(nps_file)
+    if complaints_file:
+        datasets["Complaints"] = load_data(complaints_file)
+    if hub_file:
+        datasets["Hub Performance"] = load_data(hub_file)
+    if courier_file:
+        datasets["Courier Performance"] = load_data(courier_file)
 
-    # ✅ SESSION FIX (ADDED ONLY)
+    # ✅ IMPORTANT FIX ADDED HERE
     st.session_state.datasets = datasets
 
     if datasets:
-        st.success("Datasets Loaded")
+        st.header("📌 Raw Data Overview")
+        for name, df in datasets.items():
+            with st.expander(f"{name} Dataset"):
+                dataset_summary(df, name)
 
-    if st.toggle("Enable Cleaning"):
-        for k in datasets:
-            datasets[k] = clean_data(datasets[k])
-        st.success("Data Cleaned")
+    st.header("🧹 Data Cleaning")
+    clean_toggle = st.toggle("Enable Data Cleaning (ML-based Imputation)")
 
-    if st.button("➡️ Basic Insights"):
+    cleaned_datasets = {}
+
+    if clean_toggle:
+        st.success("Data Cleaning Activated ✅")
+        for name, df in datasets.items():
+            cleaned_datasets[name] = clean_data(df)
+
+        st.header("📊 Cleaned Data Overview")
+        for name, df in cleaned_datasets.items():
+            with st.expander(f"{name} Cleaned Dataset"):
+                dataset_summary(df, name)
+
+    if clean_toggle and cleaned_datasets:
+        st.header("⬇️ Download Cleaned Data")
+        for name, df in cleaned_datasets.items():
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label=f"Download {name} Cleaned Data",
+                data=csv,
+                file_name=f"{name}_cleaned.csv"
+            )
+
+    if st.button("➡️ Go to Insights Story"):
         next_page()
 
 # -------------------------------
-# PAGE 2: BASIC Q&A
+# PAGE 2: Q&A STORY DASHBOARD
 # -------------------------------
 elif st.session_state.page == 2:
 
-    st.title("📊 Basic Insights")
+    st.title("📈 Insights & Storytelling (Q&A)")
 
-    data = st.session_state.get("datasets", {})
-
-    if "Orders" in data:
-        df = data["Orders"]
-
-        st.subheader("Order Status Distribution")
-        st.plotly_chart(px.pie(df, names="order_status"))
-
-        st.subheader("Orders by City")
-        st.plotly_chart(px.bar(df["city"].value_counts().reset_index(),
-                               x="index", y="city"))
-
-    # ✅ ADDED NAVIGATION BUTTON (NO CHANGE TO EXISTING LOGIC)
-    if st.button("➡️ Advanced Analysis Story"):
-        next_page()
-
-# -------------------------------
-# PAGE 3: ADVANCED STORY (YOUR EXISTING ONE - UNTOUCHED)
-# -------------------------------
-elif st.session_state.page == 3:
-
-    st.title("📈 Advanced Insights Story (Case Study Answers)")
-
-    data = st.session_state.get("datasets", {})
-
-    if not all(k in data for k in ["Orders","Customers","NPS","Complaints","Hub","Courier"]):
-        st.warning("Upload all datasets first")
-    else:
-
-        orders = data["Orders"]
-        nps = data["NPS"]
-        cust = data["Customers"]
-        comp = data["Complaints"]
-        hub = data["Hub"]
-        courier = data["Courier"]
-
-        st.header("📊 NPS Analysis")
-
-        promoters = nps[nps.score >= 9].shape[0]
-        detractors = nps[nps.score <= 6].shape[0]
-        total = len(nps)
-
-        overall_nps = ((promoters - detractors) / total) * 100
-        st.metric("Overall NPS", round(overall_nps,2))
-
-        nps["date"] = pd.to_datetime(nps["response_date"])
-        nps["month"] = nps["date"].dt.to_period("M")
-
-        trend = nps.groupby("month").size().reset_index(name="count")
-        st.plotly_chart(px.line(trend, x="month", y="count"))
-
-        st.header("🚚 Delivery Performance")
-
-        orders["delay"] = pd.to_datetime(orders["delivery_date"]) - pd.to_datetime(orders["promised_date"])
-        orders["delay_days"] = orders["delay"].dt.days
-
-        st.plotly_chart(px.histogram(orders, x="delay_days"))
-
-    # ✅ NEW BUTTON TO NEXT PAGE
-    if st.button("➡️ Q&A Storyboard"):
-        next_page()
-
-# -------------------------------
-# PAGE 4: NEW Q&A STORYBOARD (ADDED ONLY)
-# -------------------------------
-elif st.session_state.page == 4:
-
-    st.title("📖 Business Q&A Storyboard")
+    st.markdown("## 🎯 Answering Business Questions")
 
     data = st.session_state.get("datasets", {})
 
     if not data:
-        st.warning("Please upload data first")
+        st.warning("Please upload datasets first")
     else:
 
-        orders = data.get("Orders", pd.DataFrame())
-        nps = data.get("NPS", pd.DataFrame())
-        customers = data.get("Customers", pd.DataFrame())
-        complaints = data.get("Complaints", pd.DataFrame())
+        # -------------------------------
+        # Q1: Order Status Distribution
+        # -------------------------------
+        st.markdown("### ❓ What is the Order Status Distribution?")
+        try:
+            df = data["Orders"]
+            fig = px.pie(df, names="order_status", title="Order Status Distribution")
+            st.plotly_chart(fig, use_container_width=True)
+        except:
+            st.warning("Orders dataset required")
 
-        # Q1
-        st.header("Q1️⃣ What is the overall NPS?")
-        if not nps.empty:
-            promoters = nps[nps["score"] >= 9].shape[0]
-            detractors = nps[nps["score"] <= 6].shape[0]
-            total = len(nps)
-            nps_score = ((promoters - detractors) / total) * 100
-            st.metric("Overall NPS", round(nps_score, 2))
+        # -------------------------------
+        # Q2: Orders by City
+        # -------------------------------
+        st.markdown("### ❓ Orders by City")
+        try:
+            city_counts = df["city"].value_counts().reset_index()
+            city_counts.columns = ["city", "count"]
+            fig = px.bar(city_counts, x="city", y="count", title="Orders by City")
+            st.plotly_chart(fig, use_container_width=True)
+        except:
+            pass
 
-        # Q2
-        st.header("Q2️⃣ How is NPS changing over time?")
-        if not nps.empty:
-            nps["date"] = pd.to_datetime(nps["response_date"])
-            nps["month"] = nps["date"].dt.to_period("M")
-            trend = nps.groupby("month").size().reset_index(name="responses")
-            st.plotly_chart(px.line(trend, x="month", y="responses"))
+        # -------------------------------
+        # Q3: Trend Over Time
+        # -------------------------------
+        st.markdown("### ❓ Delivery Trend Over Time")
+        try:
+            df["order_date"] = pd.to_datetime(df["order_date"])
+            trend = df.groupby(df["order_date"].dt.date).size().reset_index(name="orders")
+            fig = px.line(trend, x="order_date", y="orders", title="Order Trend")
+            st.plotly_chart(fig, use_container_width=True)
+        except:
+            pass
 
-        # Q3
-        st.header("Q3️⃣ Which cities have highest issues?")
-        if not orders.empty:
-            city_counts = orders["city"].value_counts().reset_index()
-            city_counts.columns = ["city", "orders"]
-            st.plotly_chart(px.bar(city_counts, x="city", y="orders"))
+        # -------------------------------
+        # KPI CARDS
+        # -------------------------------
+        st.markdown("### 📊 KPI Overview")
+        col1, col2, col3 = st.columns(3)
 
-        # Q4
-        st.header("Q4️⃣ Are delays a major issue?")
-        if not orders.empty:
-            orders["delay"] = pd.to_datetime(orders["delivery_date"]) - pd.to_datetime(orders["promised_date"])
-            orders["delay_days"] = orders["delay"].dt.days
-            st.plotly_chart(px.histogram(orders, x="delay_days"))
+        try:
+            total_orders = len(df)
+            delivered = df[df["order_status"] == "Delivered"].shape[0]
+            rto = df[df["order_status"] == "RTO"].shape[0]
 
-        # Q5
-        st.header("Q5️⃣ What are customers complaining about?")
-        if not complaints.empty:
-            comp_counts = complaints["issue_type"].value_counts().reset_index()
-            comp_counts.columns = ["issue", "count"]
-            st.plotly_chart(px.pie(comp_counts, names="issue", values="count"))
+            col1.metric("Total Orders", total_orders)
+            col2.metric("Delivered", delivered)
+            col3.metric("RTO Orders", rto)
+        except:
+            pass
 
-        # Q6
-        st.header("Q6️⃣ Do delays lead to complaints?")
-        if not orders.empty and not complaints.empty:
-            delayed = orders.copy()
-            delayed["delay"] = pd.to_datetime(delayed["delivery_date"]) - pd.to_datetime(delayed["promised_date"])
-            delayed["delay_days"] = delayed["delay"].dt.days
-            delayed_orders = delayed[delayed["delay_days"] > 0]
-            merged = delayed_orders.merge(complaints, on="order_id", how="left")
-            pct = merged["ticket_id"].notnull().mean() * 100
-            st.metric("% Delayed → Complaints", round(pct, 2))
-
-        # Q7
-        st.header("Q7️⃣ Do complaints create detractors?")
-        if not complaints.empty and not nps.empty:
-            merged = complaints.merge(nps, on="order_id", how="inner")
-            detractor_pct = (merged["score"] <= 6).mean() * 100
-            st.metric("% Complaints → Detractors", round(detractor_pct, 2))
-
-        # Q8
-        st.header("Q8️⃣ Are customers coming back?")
-        if not customers.empty:
-            repeat_rate = (customers["segment"] == "Repeat").mean() * 100
-            st.metric("Repeat Rate", round(repeat_rate, 2))
-
-        st.success("📌 Final Insight: Delays → Complaints → Low NPS → Lower Retention")
+        st.success("🎯 Insight: These patterns help identify operational bottlenecks and customer experience issues.")
