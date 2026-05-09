@@ -214,7 +214,7 @@ elif st.session_state.page == 2:
             pass
 
         st.success("🎯 Insight: These patterns help identify operational bottlenecks and customer experience issues.")
-elif st.session_state.page == 1:
+if st.session_state.page == 1:
 
     # =========================================================
     # 📘 FINAL STORYBOARD (FULLY CORRECTED WITH REAL COLUMNS)
@@ -339,7 +339,7 @@ try:
 
 except Exception as e:
     st.warning(f"Storyboard Error: {e}")
-elif st.session_state.page == 2:
+if st.session_state.page == 2:
 
     # =========================================================
     # 📘 DETAILED ANSWERS (WORD-BY-WORD DISPLAY)
