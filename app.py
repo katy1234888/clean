@@ -214,13 +214,11 @@ elif st.session_state.page == 2:
             pass
 
         st.success("🎯 Insight: These patterns help identify operational bottlenecks and customer experience issues.")
-elif st.session_state.page == 3:
+# =========================================================
+# 📘 FINAL STORYBOARD (FULLY CORRECTED WITH REAL COLUMNS)
+# =========================================================
 
-    # =========================================================
-    # 📘 FINAL STORYBOARD (FULLY CORRECTED WITH REAL COLUMNS)
-    # =========================================================
-
-    st.markdown("# 📘 Business Case Storyboard (Final)")
+st.markdown("# 📘 Business Case Storyboard (Final)")
 
 try:
     data = st.session_state.get("datasets", {})
@@ -339,12 +337,11 @@ try:
 
 except Exception as e:
     st.warning(f"Storyboard Error: {e}")
-if st.session_state.page == 3:
-    st.markdown("# 📘 Detailed Business Answers")
+# =========================================================
+# 📘 DETAILED ANSWERS (WORD-BY-WORD DISPLAY)
+# =========================================================
 
-    # =========================================================
-    # 📘 DETAILED ANSWERS (WORD-BY-WORD DISPLAY)
-    # =========================================================
+st.markdown("# 📘 Detailed Business Answers")
 
 # =====================================================
 # SECTION C
